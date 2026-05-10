@@ -1,20 +1,11 @@
-import iohclustering
-import ioh
-from iohblade.experiment import Experiment
+from __future__ import annotations
+from iohblade.problem import Problem
+from iohblade.solution import Solution
 import math
 import os, time, traceback
 import numpy as np
-import pandas as pd
-
-# adjusting problem class
-from iohblade.solution import Solution
-from iohblade.utils import OverBudgetException, aoc_logger, correct_aoc
-from iohblade.problem import Problem
-import cloudpickle
 from collections import deque, Counter, defaultdict
 import random, itertools, heapq
-
-import numpy as np
 
 class BestSoFarWrapper:
     def __init__(self, problem):
@@ -48,6 +39,7 @@ class BestSoFarWrapper:
 
 # could be passed directly but this works fine
 def load_kmeans_min_baselines(path="KMeansCompare.csv"):
+        import pandas as pd
         df = pd.read_csv(path)
         return {(int(r.dataset), int(r.k)): float(r.mse) for r in df.itertuples(index=False)}
 
@@ -68,12 +60,15 @@ class IOHClusteringProblemAdapter(Problem):
         dependencies=None,
         imports=None,
     ):
+        # To fix the dependency headache & the issue of BLADE not having the right imports - rm -rf /tmp/blade_env_*
+        # you removed numpy might be an issue
         if dependencies is None:
-            dependencies = ["numpy==2.2.3", "ioh==0.3.22", "iohclustering"]
+            dependencies = ["git+https://github.com/IOHprofiler/iohclustering.git", "ioh", "pandas"]
         if imports is None:
-            imports = "import numpy as np\n"
+            imports = "import numpy as np\nimport ioh\nimport iohclustering\nimport pandas\n"
 
-        super().__init__(logger, training_instances, test_instances, name, eval_timeout)
+        super().__init__(logger, training_instances, test_instances, name, eval_timeout, dependencies=dependencies,
+    imports=imports,)
 
 
         # maybe this works maybe it does not 
@@ -98,120 +93,79 @@ class IOHClusteringProblemAdapter(Problem):
 
         # current eval has provided domain knowledge on representation of clusters
         # and is trying to ensure diveristy of algorithms
-        # self.task_prompt = r"""
-        # You are designing an optimization algorithm for an IOH clustering problem (minimizing MSE).
 
-        # INTERFACE:
-        # - __call__(self, func): perform optimization by calling func(x) to evaluate solutions.
-        # - func(x) returns the MSE as a Python float (lower is better).
-        # - Do NOT create your own problem instance or use a proxy objective.
-        # - Raise ValueError for wrong input size. Handle exceptions and reset on error.
+        self.role_prompt = "You are an excellent Python programmer."
 
-        # PROBLEM STRUCTURE — read carefully, this should inform your algorithm design:
-        # - The solution x is a flattened array of k centroids, each of dimension d = dim/k.
-        # - Objective is MSE minimization: the mean squared distance from each data point to its nearest centroid.
-        # - PERMUTATION SYMMETRY: relabelling clusters gives identical MSE. Many solutions in the search
-        # space are functionally equivalent under centroid permutation. Avoid operators that treat
-        # permuted solutions as distinct — this wastes budget on redundant evaluations.
-        # - REGIONS OF NEUTRALITY: small centroid perturbations frequently produce no MSE change,
-        # creating flat fitness landscapes. Algorithms relying solely on small local steps will stagnate.
-        # Use perturbation operators large enough to escape neutral regions.
-
-        # ALGORITHM FAMILIES — your algorithm should draw from one or more of:
-        # - Population-based: Evolutionary Algorithms, Differential Evolution, Particle Swarm Optimization.
-        # Maintain a population of centroid configurations and evolve them over generations.
-        # - Distribution-based: EDAs, UMDA. Model the distribution of good solutions and sample from it.
-        # - Hybrid: combine families above, e.g. PSO with EDA-based parameter adaptation,
-        # or DE with distribution-guided initialisation.
-
-        # REQUIRED MECHANISMS — include at least 3 of the following, described briefly:
-        # - Adaptive parameters: adjust mutation rate, crossover rate, or step size based on recent success.
-        # - Restart/multistart: reinitialise (part of) the population when stagnation is detected.
-        # - Archive/elitism: maintain a set of best-known solutions across generations.
-        # - Diversity preservation: explicitly prevent population collapse, e.g. crowding or niching.
-        # - Budget-phase scheduling: shift from exploration to exploitation as budget is consumed,
-        # e.g. large perturbations early, fine-tuning late.
-        # - Symmetry-aware operators: detect and collapse permutation-equivalent solutions in the population
-        # to free budget for genuinely distinct regions of the search space.
-        # - Neutral escape operators: use perturbations scaled to the cluster diameter or data spread
-        # to reliably escape flat MSE regions rather than relying on infinitesimal steps.
-
-        # CONSTRAINTS:
-        # - Keep side-effects minimal.
-        # - The algorithm must terminate within the given budget of func evaluations.
-        # - Do not hardcode problem-specific constants — infer dim, k, and bounds from func at runtime.
-        # """
-
-        self.task_prompt = r"""
-        You are designing an optimization algorithm for an IOH clustering problem (minimizing MSE).
+        self.task_prompt = r"""You are designing a black-box optimization algorithm for an IOH clustering problem (minimizing MSE).
 
         INTERFACE:
-        - __call__(self, func): optimize by calling func(x) to evaluate solutions.
-        - func(x) returns MSE as a Python float (lower is better).
-        - Do NOT create your own problem instance or use a proxy objective.
-        - Infer dim from len(func.bounds.lb) inside __call__ rather than __init__.
-        - Accept dim as an optional __init__ argument for compatibility but do not require it.
+        - Implement a class with __init__(self, budget, dim=None, seed=None) and __call__(self, func).
+        - func(x) evaluates a 1D NumPy float64 array and returns a Python float MSE (lower is better).
+        - Infer dim from len(func.bounds.lb). Enforce bounds with np.clip(x, func.bounds.lb, func.bounds.ub).
+        - Do NOT instantiate the problem yourself. Never call func(x) after budget is exhausted.
+        - Use // or int(...) for any integer. Before reshape, verify compatibility with x.size.
 
-        PROBLEM STRUCTURE:
-        - x is a flattened array of k centroids. Permutation symmetry means relabelling clusters 
-        gives identical MSE. Small perturbations frequently produce no MSE change (neutral regions).
+        ALGORITHM:
+        - Base your design on exactly one of: PSO, DE, UMDA, or ES.
+        - You may extend or adapt it, but the core mechanism must remain recognisable.
 
-        ALGORITHM DESIGN:
-        - Draw from population-based (EA, PSO, DE), distribution-based (EDA, UMDA), or hybrid approaches.
-        - Include at least 3 of: adaptive parameters, restart/multistart, archive/elitism, 
-        diversity preservation, budget-phase scheduling, symmetry-aware or neutral-escape operators.
-        """
+        OUTPUT: Return (f_opt, x_opt)."""
 
         # order of the example prompts
         # [RandomSearch, NeighborhoodAdaptiveDE, ParticleSwarmOptimiser, UMDA, GreedyHillClimber]
+        
+        # Uncomment for reg mutation prompts
+        
+        # self.mutation_prompts = [
+        #         "Refine the strategy of the selected solution to improve it.",  # small mutation
+        #         "Generate a new algorithm that is different from the algorithms you have tried before." 
+        #     ]
+
         self.mutation_prompts = ["""An example of such code (a simple random search) for an IOH *clustering* objective is as follows.
-        Note: for clustering problems.
-
-        ```python
-            import numpy as np
-
-            class RandomSearch:
-                def __init__(self, budget, dim, seed=None):
-                    self.budget = budget
-                    self.dim = dim
-                    self.rng = np.random.default_rng(seed)
-
-                def __call__(self, func):
-                    f_opt = np.inf
-                    x_opt = None
-
-                    lb = np.asarray(func.bounds.lb, dtype=float)
-                    ub = np.asarray(func.bounds.ub, dtype=float)
-
-                    while func.state.evaluations < self.budget:
-                        x = self.rng.uniform(lb, ub, size=self.dim)
-                        f = func(x)
-
-                        if f < f_opt:
-                            f_opt = f
-                            x_opt = x.copy()
-
-        return f_opt, x_opt""", """
+Note: for clustering problems. Use the type of algorithm in the name of the program.
+```python
 import numpy as np
+class RandomSearch:
+    def __init__(self, budget, dim, seed=None):
+        self.budget = budget
+        self.dim = dim
+        self.rng = np.random.default_rng(seed)
 
+    def __call__(self, func):
+        f_opt = np.inf
+        x_opt = None
+
+        lb = np.asarray(func.bounds.lb, dtype=float)
+        ub = np.asarray(func.bounds.ub, dtype=float)
+
+        while func.state.evaluations < self.budget:
+            x = self.rng.uniform(lb, ub, size=self.dim)
+            f = func(x)
+
+            if f < f_opt:
+                f_opt = f
+                x_opt = x.copy()
+
+        return f_opt, x_opt```""", 
+"""An example of such code NeighborhoodAdaptiveDE for an IOH *clustering* objective is as follows.
+Note: for clustering problems. Use the type of algorithm in the name of the program.
+```python
+import numpy as np
 class NeighborhoodAdaptiveDE:
-    def __init__(self, budget = 2000, dim, seed = None):
-        self.budget: int = budget
-        self.dim: int = dim
+    def __init__(self, budget=2000, dim=None, seed=None):
+        self.budget = budget
+        self.dim = dim
         self.seed = seed
-
-        self.success_f: list = []
-        self.success_cr: list = []
-        self.best_fitness_history: list = []
-
-        # Hyperparameters that can be tuned
-        self.pop_size: int = 50
-        self.adapt_freq: int = 50
-        self.stagnation_threshold: int = 1000
-        self.learning_rate: float = 0.1
-        self.neighborhood_size: int = 5
-        self.f: float = 0.5
-        self.cr: float = 0.9
+        self.success_f = []
+        self.success_cr = []
+        self.best_fitness_history = [] 
+        self.pop_size = 50
+        self.adapt_freq = 50
+        self.stagnation_threshold = 1000
+        self.learning_rate = 0.1
+        self.neighborhood_size = 5
+        self.f = 0.5
+        self.cr = 0.9
 
     def __call__(self, func):
         np.random.seed(self.seed)
@@ -229,27 +183,24 @@ class NeighborhoodAdaptiveDE:
 
         while self.evals < self.budget:
             for i in range(self.pop_size):
-                # Neighborhood-based Mutation
                 neighbors = np.random.choice(np.arange(self.pop_size), self.neighborhood_size, replace=False)
                 best_neighbor_idx = neighbors[np.argmin(self.fitness[neighbors])]
-                
+
                 idxs = np.random.choice(np.arange(self.pop_size), 2, replace=False)
                 x1, x2 = self.population[idxs]
 
                 v = self.population[best_neighbor_idx] + self.f * (x1 - x2)
                 v = np.clip(v, func.bounds.lb, func.bounds.ub)
-                
-                # Orthogonal Crossover
+
                 u = np.copy(self.population[i])
                 j_rand = np.random.randint(self.dim)
                 for j in range(self.dim):
                     if np.random.rand() < self.cr or j == j_rand:
                         u[j] = v[j]
-                
+
                 f_new = func(u)
                 self.evals += 1
-                
-                # Selection
+
                 if f_new < self.fitness[i]:
                     self.success_f.append(self.f)
                     self.success_cr.append(self.cr)
@@ -262,17 +213,15 @@ class NeighborhoodAdaptiveDE:
                         self.best_fitness_history.append(f_opt)
                         self.last_improvement = self.evals
 
-            # Adaptive Parameter Control
             if self.evals % self.adapt_freq == 0:
                 if self.success_f:
                     self.f = (1 - self.learning_rate) * self.f + self.learning_rate * np.mean(self.success_f)
                     self.cr = (1 - self.learning_rate) * self.cr + self.learning_rate * np.mean(self.success_cr)
-                self.f = np.clip(self.f, 0.1, 0.9)
-                self.cr = np.clip(self.cr, 0.1, 1.0)
-                self.success_f = []
-                self.success_cr = []
-            
-            # Stagnation Check and Restart
+                    self.f = np.clip(self.f, 0.1, 0.9)
+                    self.cr = np.clip(self.cr, 0.1, 1.0)
+                    self.success_f = []
+                    self.success_cr = []
+
             if self.evals - self.last_improvement > self.stagnation_threshold:
                 self.population = np.random.uniform(func.bounds.lb, func.bounds.ub, size=(self.pop_size, self.dim))
                 self.fitness = np.array([func(x) for x in self.population])
@@ -282,22 +231,26 @@ class NeighborhoodAdaptiveDE:
                 x_opt = self.population[best_idx]
                 self.last_improvement = self.evals
                 self.best_fitness_history.append(f_opt)
-                    
-        return f_opt, x_opt""", """import numpy as np
+
+        return f_opt, x_opt```""", 
+"""An example of such code a particle swarm optimiser for an IOH *clustering* objective is as follows.
+Note: for clustering problems. Use the type of algorithm in the name of the program.
+
+```python
+import numpy as np
 
 class ParticleSwarmOptimization:
-    def __init__(self, budget=10000, dim, seed=None):
+    def __init__(self, budget=10000, dim=None, seed=None):
         self.budget = budget
         self.dim = dim
         self.rng = np.random.default_rng(seed)
 
-        # Hyperparameters, can be tuned
-        self.s: int = 50
-        self.inertia: float = 0.5
-        self.psi_p: float = 1.5
-        self.psi_g: float = 1.5
+        self.s = 50
+        self.inertia = 0.5
+        self.psi_p = 1.5
+        self.psi_g = 1.5
 
-    def __call__(self, func) :
+    def __call__(self, func):
         positions = self.rng.uniform(func.bounds.lb, func.bounds.ub, size=(self.s, self.dim))
         domain = np.abs(np.array(func.bounds.ub) - np.array(func.bounds.lb))
         velocity = self.rng.uniform(-domain, domain, size=(self.s, self.dim))
@@ -311,7 +264,11 @@ class ParticleSwarmOptimization:
         while func.state.evaluations + self.s <= self.budget:
             rp = self.rng.uniform(size=(self.s, 1))
             rg = self.rng.uniform(size=(self.s, 1))
-            velocity = ((self.inertia * velocity) + (self.psi_p * rp * (best_known_positions - positions)) + (self.psi_g * rg * (x_opt - positions)))
+            velocity = (
+                (self.inertia * velocity)
+                + (self.psi_p * rp * (best_known_positions - positions))
+                + (self.psi_g * rg * (x_opt - positions))
+            )
 
             positions += velocity
             f = np.array([func(x) for x in positions])
@@ -327,40 +284,43 @@ class ParticleSwarmOptimization:
             if abs(func.optimum.y - func.state.current_best.y) < 1e-8:
                 break
 
-        return f_opt, x_opt""", """
+        return f_opt, x_opt```""", 
+
+"""An example of such code a UMDA solution for an IOH *clustering* objective is as follows.
+Note: for clustering problems.
+
+```python
 import numpy as np
 import math
- 
+
 class UMDA:
     def __init__(self, budget, dim, seed=None):
         self.budget = budget
         self.dim = dim
         self.rng = np.random.default_rng(seed)
-        # Hyperparameters
         self.population_size = 50
- 
+
     def __call__(self, func):
         n = self.dim
         s = self.population_size
- 
+
         pop = self.rng.integers(0, 2, size=(s, n), dtype=np.uint8)
         fitness = np.empty(s, dtype=float)
         for i in range(s):
             fitness[i] = func(pop[i])
- 
+
         best_idx = int(np.argmax(fitness))
         best_x = pop[best_idx].copy()
         best_f = float(fitness[best_idx])
- 
-        mu = s // 2  # number of parents selected
+
+        mu = s // 2
         idx_sorted = np.argsort(-fitness)
         parents = pop[idx_sorted[:mu]]
- 
+
         while func.state.evaluations + s <= self.budget:
-            # Estimate marginal probabilities
             counts = parents.sum(axis=0)
             p = np.clip(2.0 * counts / s, 1.0 / n, 1.0 - 1.0 / n)
- 
+
             pop = (self.rng.random((s, n)) < p).astype(np.uint8)
             fitness = np.empty(s, dtype=float)
             for i in range(s):
@@ -369,38 +329,14 @@ class UMDA:
                 fitness[i] = func(pop[i])
                 if fitness[i] > best_f:
                     best_f, best_x = fitness[i], pop[i].copy()
-           
+
             if best_f >= func.optimum.y:
                 break
- 
+
             idx_sorted = np.argsort(-fitness)
             parents = pop[idx_sorted[:mu]]
- 
-        return best_f, best_x""", """import numpy as np
 
-class GreedyHillClimber:
-    def __init__(self, budget, dim, seed=None):
-        self.budget = budget
-        self.dim = dim
-        self.rng = np.random.default_rng(seed)
-
-    def __call__(self, func):  # Run the algorithm on one problem instance, `func` is a function object (callable).
-        self.mutation_rate = (1.0 / self.dim)
-        x = self.rng.integers(0, 2, self.dim)
-        fx = func(x)
-        idx = 0
-        while func.state.evaluations < self.budget:
-            y = x.copy()
-            y[idx] = 1 - y[idx]  # flip bits for 0/1 domain
-            idx = (idx + 1) % self.dim
-            fy = func(y)
-
-            if fy > fx:
-                x, fx = y, fy
-
-            if fy >= func.optimum.y:
-                break
-        return fx, x"""]
+        return best_f, best_x```"""]
 
         self.example_prompt = """An example of such code (a simple random search) for an IOH *clustering* objective is as follows.
         Note: for clustering problems.
@@ -430,6 +366,8 @@ class GreedyHillClimber:
                             x_opt = x.copy()
 
         return f_opt, x_opt"""
+
+       
 
         self.format_prompt = """
             Give an excellent and novel heuristic algorithm to solve this task and also give it a one-line description, describing the main idea. Give the response in the format:
@@ -503,6 +441,7 @@ class GreedyHillClimber:
     # -------------------------
     @staticmethod
     def _make_problem(fid: int, iid: int, k: int):
+        import iohclustering
         p, _ = iohclustering.get_problem(fid=fid, instance=iid, k=k)
         
         return p
@@ -529,6 +468,11 @@ class GreedyHillClimber:
     # Evaluation (AOCC-style, like BBOB_SBOX)
     # -------------------------
     def evaluate(self, solution: Solution, test: bool = False):
+        # Lazy imports for dependencies only needed during evaluation
+        import ioh
+        from iohblade.solution import Solution as SolutionClass
+        from iohblade.utils import OverBudgetException, aoc_logger, correct_aoc
+        
         self._eval_calls = getattr(self, "_eval_calls", 0) + 1
         solution.add_metadata("eval_call_index", self._eval_calls)
         
