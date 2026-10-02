@@ -1,0 +1,21 @@
+experiment,run,best_mean_auc_imp,frac_problems_beating_kmeans,cliffs_delta_vs_kmeans,magnitude
+E1: No domain knowledge,0,-0.0044643211651933384,0.125,-0.75,large
+E1: No domain knowledge,1,-0.006465915143287788,0.0,-1.0,large
+E1: No domain knowledge,2,-0.007875424233678525,0.0,-1.0,large
+E1: No domain knowledge,3,-0.00601125732532784,0.09375,-0.8125,large
+E1: No domain knowledge,4,-0.009696118187188517,0.0,-1.0,large
+E2: Domain knowledge,0,-0.004378673323888993,0.1875,-0.625,large
+E2: Domain knowledge,1,-0.010610265602487765,0.0,-1.0,large
+E2: Domain knowledge,2,-0.010338164727765877,0.0,-1.0,large
+E2: Domain knowledge,3,-0.008773076231087265,0.0,-1.0,large
+E2: Domain knowledge,4,-0.008524969640610752,0.0,-1.0,large
+E3: Domain + mutation prompts,0,-0.008972302527032489,0.0,-1.0,large
+E3: Domain + mutation prompts,1,-0.010105145355941765,0.0,-1.0,large
+E3: Domain + mutation prompts,2,-0.007654063123022258,0.0,-1.0,large
+E3: Domain + mutation prompts,3,-0.007345145135071349,0.0,-1.0,large
+E3: Domain + mutation prompts,4,-0.0044754440456438865,0.09375,-0.8125,large
+E4: Domain + warm start,0,-0.007710212916224456,0.0,-1.0,large
+E4: Domain + warm start,1,-0.0066653439912924654,0.0,-1.0,large
+E4: Domain + warm start,2,-0.002583044313706137,0.25,-0.5,large
+E4: Domain + warm start,3,-0.007722306210904171,0.0,-1.0,large
+E4: Domain + warm start,4,-0.006778128208844765,0.0,-1.0,large

@@ -1,0 +1,25 @@
+experiment,metric,cliffs_delta,magnitude
+E2: Domain knowledge,average_convergence_rate,-0.28,small
+E2: Domain knowledge,avg_improvement,0.44,medium
+E2: Domain knowledge,success_rate,-0.28,small
+E2: Domain knowledge,longest_no_improvement_streak,-0.24,small
+E2: Domain knowledge,last_improvement_fraction,0.44,medium
+E2: Domain knowledge,final_best,0.44,medium
+E2: Domain knowledge,fully_valid_fraction,-0.08,negligible
+E2: Domain knowledge,any_failure_fraction,0.08,negligible
+E3: Domain + mutation prompts,average_convergence_rate,-0.04,negligible
+E3: Domain + mutation prompts,avg_improvement,0.2,small
+E3: Domain + mutation prompts,success_rate,0.36,medium
+E3: Domain + mutation prompts,longest_no_improvement_streak,-0.04,negligible
+E3: Domain + mutation prompts,last_improvement_fraction,0.16,small
+E3: Domain + mutation prompts,final_best,0.28,small
+E3: Domain + mutation prompts,fully_valid_fraction,-0.28,small
+E3: Domain + mutation prompts,any_failure_fraction,0.28,small
+E4: Domain + warm start,average_convergence_rate,0.12,negligible
+E4: Domain + warm start,avg_improvement,0.04,negligible
+E4: Domain + warm start,success_rate,0.24,small
+E4: Domain + warm start,longest_no_improvement_streak,-0.6,large
+E4: Domain + warm start,last_improvement_fraction,0.2,small
+E4: Domain + warm start,final_best,-0.04,negligible
+E4: Domain + warm start,fully_valid_fraction,0.0,negligible
+E4: Domain + warm start,any_failure_fraction,0.0,negligible
