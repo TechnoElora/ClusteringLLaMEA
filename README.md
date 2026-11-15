@@ -4,7 +4,7 @@
 
 Author - Anon, Affliation - Anon, 2026
 
-[Paper](LINK_TO_PAPER) | [Data archive](LINK_TO_ZENODO_DOI) | [Citation](#citation)
+[Paper](LINK_TO_PAPER) | [Data archive](https://zenodo.org/records/24244235?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6IjA4N2NlNTIyLTVlYmMtNGE0Yy04ZWU5LTljYzI1OGYxY2QzNiIsImRhdGEiOnt9LCJyYW5kb20iOiJkYmRlNGViMzU3NTJhN2MzZmRjZWM3OTZlMzgwN2U1ZiJ9.lLMlLAnRxBaAwQciW5RnL_sF83heD9xgP-QcgOZ2hWnofB9HRkqC4fA44VBb-m_oCO6NIV-tPluSdBGnkJGcag) | [Citation](#citation)
 
 > [!NOTE]
 > This repository contains the code, analysis scripts and result tables for the paper above. Raw run logs and generated algorithms are archived separately; see [Data and results](#data-and-results).
@@ -125,9 +125,9 @@ uv run python Analysis/Per_Generated_Algorithm/range_of_vals_compare.py
 | CMA-ES results | [`overview_cmaes.csv`](overview_cmaes.csv) |
 | Generalisation results | [`generalizability_mse_by_fid_k.csv`](generalizability_mse_by_fid_k.csv), [`generalizability_results_domain.csv`](generalizability_results_domain.csv), [`generalizability_results_overwrite.csv`](generalizability_results_overwrite.csv) |
 | Effect sizes (Cliff's delta) | [`Analysis/Per_LLaMEA_run/cliffs_delta_vs_reference.csv`](Analysis/Per_LLaMEA_run/cliffs_delta_vs_reference.csv) |
-| Raw LLaMEA run logs and generated algorithms | [Zenodo archive]([LINK_TO_ZENODO_DOI]) |
+| Raw LLaMEA run logs and generated algorithms | [Zenodo archive](https://zenodo.org/records/24244235?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6IjA4N2NlNTIyLTVlYmMtNGE0Yy04ZWU5LTljYzI1OGYxY2QzNiIsImRhdGEiOnt9LCJyYW5kb20iOiJkYmRlNGViMzU3NTJhN2MzZmRjZWM3OTZlMzgwN2U1ZiJ9.lLMlLAnRxBaAwQciW5RnL_sF83heD9xgP-QcgOZ2hWnofB9HRkqC4fA44VBb-m_oCO6NIV-tPluSdBGnkJGcag) |
 
-Individual files can be downloaded from GitHub, or by raw URL, e.g. `https://github.com/<USER>/<REPO>/raw/main/overview_cmaes.csv`. The full repository is available as a [ZIP archive](https://github.com/<USER>/<REPO>/archive/refs/heads/main.zip).
+When importing the run log generated algorithms, extract the zip file and add the internal folder to your local version of this repo (do not change the extracted folder names otherwise the analysis files will not find the logs.).
 
 ## Reproducibility notes
 
