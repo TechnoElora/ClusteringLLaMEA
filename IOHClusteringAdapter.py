@@ -51,8 +51,8 @@ class IOHClusteringProblemAdapter(Problem):
         test_instances=None,       # ^ and use these values to get clustering problem
         name="IOH_CLUSTERING",
         data_set_name = None,  # for analysis
-        eval_timeout=1000,
-        base_budget=1000,
+        eval_timeout=5000,
+        base_budget=5000,
         budget_scale_with_dim=True,
         # This might be good to have and change later 
         full_ioh_log=True,
