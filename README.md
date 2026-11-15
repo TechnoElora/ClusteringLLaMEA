@@ -4,7 +4,7 @@
 
 Author - Anon, Affliation - Anon, 2026
 
-[Paper](LINK_TO_PAPER) | [Data archive](https://zenodo.org/records/24244235?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6IjA4N2NlNTIyLTVlYmMtNGE0Yy04ZWU5LTljYzI1OGYxY2QzNiIsImRhdGEiOnt9LCJyYW5kb20iOiJkYmRlNGViMzU3NTJhN2MzZmRjZWM3OTZlMzgwN2U1ZiJ9.lLMlLAnRxBaAwQciW5RnL_sF83heD9xgP-QcgOZ2hWnofB9HRkqC4fA44VBb-m_oCO6NIV-tPluSdBGnkJGcag) | [Citation](#citation)
+| [Data archive](https://zenodo.org/records/24244235?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6IjA4N2NlNTIyLTVlYmMtNGE0Yy04ZWU5LTljYzI1OGYxY2QzNiIsImRhdGEiOnt9LCJyYW5kb20iOiJkYmRlNGViMzU3NTJhN2MzZmRjZWM3OTZlMzgwN2U1ZiJ9.lLMlLAnRxBaAwQciW5RnL_sF83heD9xgP-QcgOZ2hWnofB9HRkqC4fA44VBb-m_oCO6NIV-tPluSdBGnkJGcag) | [Citation](#citation)
 
 > [!NOTE]
 > This repository contains the code, analysis scripts and result tables for the paper above. Raw run logs and generated algorithms are archived separately; see [Data and results](#data-and-results).
